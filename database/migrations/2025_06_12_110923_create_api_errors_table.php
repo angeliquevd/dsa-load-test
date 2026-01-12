@@ -15,11 +15,11 @@ return new class extends Migration
             $table->id();
             $table->string('url')->nullable();
             $table->string('method');
-            $table->text('request_payload')->nullable();
+            $table->longText('request_payload')->nullable();
             $table->integer('statement_response_id')->nullable();
             $table->integer('status_code')->nullable();
-            $table->text('error_message')->nullable();
-            $table->text('response_body')->nullable();
+            $table->longText('error_message')->nullable();
+            $table->longText('response_body')->nullable();
             $table->timestamps();
         });
     }

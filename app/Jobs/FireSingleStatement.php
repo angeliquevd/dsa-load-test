@@ -3,29 +3,31 @@
 namespace App\Jobs;
 
 use App\Models\ApiError;
+use App\Models\StatementResponse;
 use Carbon\Carbon;
+use Carbon\Carbon as CarbonTime;
+use Faker\Generator;
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldBeUnique;
+use Illuminate\Container\Container;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use Faker\Generator;
-use Illuminate\Container\Container;
-use Carbon\Carbon as CarbonTime;
-use Illuminate\Support\Facades\Cache;
-use App\Models\StatementResponse;
 
 class FireSingleStatement implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     private $id;
+
     private $faker;
+
     public $statement;
+
     public $url;
 
     /**
@@ -42,6 +44,7 @@ class FireSingleStatement implements ShouldQueue
      * Execute the job.
      *
      * @return void
+     *
      * @throws ConnectionException
      */
     public function handle()
@@ -57,53 +60,54 @@ class FireSingleStatement implements ShouldQueue
             'start_date' => $date_sent,
             'content_date' => $content_date,
             'application_date' => $application_date,
-            'countries_list' => $this->faker->randomElements(["IE", "DE", "FR", "NL", "BE"]),
-            "decision_visibility" => fake()->randomElements([
-                "DECISION_VISIBILITY_CONTENT_REMOVED",
-                "DECISION_VISIBILITY_CONTENT_DISABLED",
-                "DECISION_VISIBILITY_CONTENT_DEMOTED"
+            'countries_list' => $this->faker->randomElements(['IE', 'DE', 'FR', 'NL', 'BE']),
+            'decision_visibility' => fake()->randomElements([
+                'DECISION_VISIBILITY_CONTENT_REMOVED',
+                'DECISION_VISIBILITY_CONTENT_DISABLED',
+                'DECISION_VISIBILITY_CONTENT_DEMOTED',
             ]),
-            "decision_monetary" => fake()->randomElement([
-                "DECISION_MONETARY_SUSPENSION",
-                "DECISION_MONETARY_TERMINATION"
+            'decision_monetary' => fake()->randomElement([
+                'DECISION_MONETARY_SUSPENSION',
+                'DECISION_MONETARY_TERMINATION',
             ]),
-            "decision_provision" => fake()->randomElement([
-                "DECISION_PROVISION_PARTIAL_SUSPENSION",
-                "DECISION_PROVISION_TOTAL_SUSPENSION",
-                "DECISION_PROVISION_PARTIAL_TERMINATION",
-                "DECISION_PROVISION_TOTAL_TERMINATION"
+            'decision_provision' => fake()->randomElement([
+                'DECISION_PROVISION_PARTIAL_SUSPENSION',
+                'DECISION_PROVISION_TOTAL_SUSPENSION',
+                'DECISION_PROVISION_PARTIAL_TERMINATION',
+                'DECISION_PROVISION_TOTAL_TERMINATION',
             ]),
-            "decision_account" => fake()->randomElement(["DECISION_ACCOUNT_SUSPENDED", "DECISION_ACCOUNT_TERMINATED"]),
-            "content_type" => fake()->randomElements(["CONTENT_TYPE_TEXT", "CONTENT_TYPE_VIDEO", "CONTENT_TYPE_IMAGE"]),
-            "category" => fake()->randomElement([
-                "STATEMENT_CATEGORY_ANIMAL_WELFARE",
-                "STATEMENT_CATEGORY_DATA_PROTECTION_AND_PRIVACY_VIOLATIONS",
-                "STATEMENT_CATEGORY_ILLEGAL_OR_HARMFUL_SPEECH",
-                "STATEMENT_CATEGORY_INTELLECTUAL_PROPERTY_INFRINGEMENTS"
+            'decision_account' => fake()->randomElement(['DECISION_ACCOUNT_SUSPENDED', 'DECISION_ACCOUNT_TERMINATED']),
+            'content_type' => fake()->randomElements(['CONTENT_TYPE_TEXT', 'CONTENT_TYPE_VIDEO', 'CONTENT_TYPE_IMAGE']),
+            'category' => fake()->randomElement([
+                'STATEMENT_CATEGORY_ANIMAL_WELFARE',
+                'STATEMENT_CATEGORY_OTHER_VIOLATION_TC',
+                'STATEMENT_CATEGORY_DATA_PROTECTION_AND_PRIVACY_VIOLATIONS',
+                'STATEMENT_CATEGORY_ILLEGAL_OR_HARMFUL_SPEECH',
+                'STATEMENT_CATEGORY_INTELLECTUAL_PROPERTY_INFRINGEMENTS',
             ]),
-            "incompatible_content_illegal" => fake()->randomElement(["Yes", "No"]),
-            "decision_facts" => "facts about the decision",
-            "automated_detection" => fake()->randomElement(["Yes", "No"]),
-            "automated_decision" => fake()->randomElement([
-                "AUTOMATED_DECISION_FULLY",
-                "AUTOMATED_DECISION_PARTIALLY",
-                "AUTOMATED_DECISION_NOT_AUTOMATED"
+            'incompatible_content_illegal' => fake()->randomElement(['Yes', 'No']),
+            'decision_facts' => 'facts about the decision',
+            'automated_detection' => fake()->randomElement(['Yes', 'No']),
+            'automated_decision' => fake()->randomElement([
+                'AUTOMATED_DECISION_FULLY',
+                'AUTOMATED_DECISION_PARTIALLY',
+                'AUTOMATED_DECISION_NOT_AUTOMATED',
             ]),
-            "source_type" => fake()->randomElement(["SOURCE_ARTICLE_16", "SOURCE_TRUSTED_FLAGGER", "SOURCE_VOLUNTARY"]),
-            "source" => fake()->word,
-            "puid" => fake()->uuid,
-            "url" => fake()->url,
+            'source_type' => fake()->randomElement(['SOURCE_ARTICLE_16', 'SOURCE_TRUSTED_FLAGGER', 'SOURCE_VOLUNTARY']),
+            'source' => fake()->word,
+            'puid' => fake()->uuid,
+            'url' => fake()->url,
         ];
 
         $statement['decision_ground'] = fake()->randomElement([
-            "DECISION_GROUND_ILLEGAL_CONTENT",
-            "DECISION_GROUND_INCOMPATIBLE_CONTENT"
+            'DECISION_GROUND_ILLEGAL_CONTENT',
+            'DECISION_GROUND_INCOMPATIBLE_CONTENT',
         ]);
-        if ($statement['decision_ground'] == "DECISION_GROUND_ILLEGAL_CONTENT") {
+        if ($statement['decision_ground'] == 'DECISION_GROUND_ILLEGAL_CONTENT') {
             $statement['illegal_content_legal_ground'] = fake()->text;
             $statement['illegal_content_explanation'] = fake()->text;
         }
-        if ($statement['decision_ground'] == "DECISION_GROUND_INCOMPATIBLE_CONTENT") {
+        if ($statement['decision_ground'] == 'DECISION_GROUND_INCOMPATIBLE_CONTENT') {
             $statement['incompatible_content_ground'] = fake()->text;
             $statement['incompatible_content_explanation'] = fake()->text;
         }
@@ -117,14 +121,14 @@ class FireSingleStatement implements ShouldQueue
             Cache::put('single_processing_start', $startTime->toIso8601String(), now()->addHours(1));
             Log::info('[METRICS] First single statement started sending', [
                 'timestamp' => $startTime->toIso8601String(),
-                'statement_id' => $this->id
+                'statement_id' => $this->id,
             ]);
         }
 
         $response = Http::timeout(60)->connectTimeout(60)->withHeaders([
-            'Authorization' => 'Bearer ' . config('app.remote_token'),
+            'Authorization' => 'Bearer '.config('app.remote_token'),
             'accept' => 'application/json',
-            'content-type' => 'application/json'
+            'content-type' => 'application/json',
         ])->post($this->url, $statement)->throw();
 
         if ($response->successful()) {
@@ -145,21 +149,21 @@ class FireSingleStatement implements ShouldQueue
         // Increment the processed count
         $processed = Cache::increment('single_processed_count');
         $total = Cache::get('total_single_count');
-        Log::info("Processed: " . $processed . " - Total: " . $total);
+        Log::info('Processed: '.$processed.' - Total: '.$total);
 
         // Always log the current progress for debugging
-        Log::debug("[METRICS] Single statement progress", [
+        Log::debug('[METRICS] Single statement progress', [
             'processed' => $processed,
             'total' => $total,
-            'statement_id' => $this->id
+            'statement_id' => $this->id,
         ]);
 
         // If this is the last statement, log the complete metrics
         if ($processed >= $total) {
             $startTimeStr = Cache::get('single_processing_start');
             $endTimeStr = Cache::get('single_processing_end');
-            Log::info("single_processing_start: " . $startTimeStr);
-            Log::info("single_processing_end: " . $endTimeStr);
+            Log::info('single_processing_start: '.$startTimeStr);
+            Log::info('single_processing_end: '.$endTimeStr);
 
             // Make sure we have valid timestamps
             if ($startTimeStr && $endTimeStr) {
@@ -172,14 +176,14 @@ class FireSingleStatement implements ShouldQueue
                     'timestamp_end' => $endTimeStr,
                     'duration_seconds' => $duration,
                     'total_statements' => $total,
-                    'processed_statements' => $processed
+                    'processed_statements' => $processed,
                 ]);
             } else {
                 Log::warning('[METRICS] Could not generate final single statement metrics - missing timestamps', [
-                    'has_start_time' => (bool)$startTimeStr,
-                    'has_end_time' => (bool)$endTimeStr,
+                    'has_start_time' => (bool) $startTimeStr,
+                    'has_end_time' => (bool) $endTimeStr,
                     'processed' => $processed,
-                    'total' => $total
+                    'total' => $total,
                 ]);
             }
         }
@@ -188,7 +192,6 @@ class FireSingleStatement implements ShouldQueue
     /**
      * Handle a job failure.
      *
-     * @param  \Throwable  $exception
      * @return void
      */
     public function failed(\Throwable $exception)
@@ -197,7 +200,7 @@ class FireSingleStatement implements ShouldQueue
             Log::error('[ERROR] Single statement API call failed', [
                 'statement_id' => $this->id,
                 'status' => $exception->response->status(),
-                'response_body' => $exception->response->body()
+                'response_body' => $exception->response->body(),
             ]);
 
             ApiError::create([

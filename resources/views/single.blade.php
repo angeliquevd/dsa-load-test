@@ -25,6 +25,7 @@
                 <div class="flex space-x-4">
                     <a href="{{ url('/') }}" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-200 hover:text-gray-900 {{ request()->is('/') ? 'bg-gray-200 text-gray-900' : '' }}">Batch Statements</a>
                     <a href="{{ route('single') }}" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-200 hover:text-gray-900 {{ request()->routeIs('single') ? 'bg-gray-200 text-gray-900' : '' }}">Single Statement</a>
+                    <a href="{{ route('continuous') }}" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-200 hover:text-gray-900 {{ request()->routeIs('continuous') ? 'bg-gray-200 text-gray-900' : '' }}">Continuous</a>
                     <a href="{{ route('metrics') }}" class="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-200 hover:text-gray-900 {{ request()->routeIs('metrics') ? 'bg-gray-200 text-gray-900' : '' }}">View Metrics</a>
                 </div>
             </div>
