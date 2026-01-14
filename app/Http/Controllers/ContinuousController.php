@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Jobs\ContinuousMultiJob;
+use App\Jobs\ContinuousSingleJob;
 use App\Models\ContinuousRun;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -36,10 +37,11 @@ class ContinuousController extends Controller
             'started_at' => now(),
         ]);
 
-        // Dispatch the continuous job
+        // Dispatch both continuous jobs in parallel
         ContinuousMultiJob::dispatch($continuousRun->id);
+        ContinuousSingleJob::dispatch($continuousRun->id);
 
-        return back()->with('status', 'Continuous execution started. Sending 300 SORs per cycle.');
+        return back()->with('status', 'Continuous execution started. Multi: 300 SORs/cycle, Single: 1000 SORs/cycle.');
     }
 
     public function stop(): RedirectResponse
@@ -74,6 +76,10 @@ class ContinuousController extends Controller
                     'statements_per_second' => $lastRun->getStatementsPerSecond(),
                     'started_at' => $lastRun->started_at?->toDateTimeString(),
                     'stopped_at' => $lastRun->stopped_at?->toDateTimeString(),
+                    'total_single_cycles' => $lastRun->total_single_cycles,
+                    'total_single_statements' => $lastRun->total_single_statements,
+                    'total_single_errors' => $lastRun->total_single_errors,
+                    'single_statements_per_second' => $lastRun->getSingleStatementsPerSecond(),
                 ] : null,
             ]);
         }
@@ -89,6 +95,10 @@ class ContinuousController extends Controller
                 'statements_per_second' => $currentRun->getStatementsPerSecond(),
                 'started_at' => $currentRun->started_at?->toDateTimeString(),
                 'stopped_at' => $currentRun->stopped_at?->toDateTimeString(),
+                'total_single_cycles' => $currentRun->total_single_cycles,
+                'total_single_statements' => $currentRun->total_single_statements,
+                'total_single_errors' => $currentRun->total_single_errors,
+                'single_statements_per_second' => $currentRun->getSingleStatementsPerSecond(),
             ],
         ]);
     }

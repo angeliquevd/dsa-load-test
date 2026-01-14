@@ -35,7 +35,7 @@
     <main class="flex-grow container mx-auto px-6 py-12">
         <div class="bg-white p-8 rounded-lg shadow-xl max-w-2xl mx-auto">
             <h1 class="text-3xl font-bold mb-2 text-center text-gray-700">Continuous Execution</h1>
-            <p class="text-center text-gray-500 mb-8">Sends 300 SORs per cycle (3 jobs x 100 statements)</p>
+            <p class="text-center text-gray-500 mb-8">Multi: 300 SORs/cycle (3 x 100 batch) | Single: 1000 SORs/cycle</p>
 
             @if(Session::has('status'))
                 <div class="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 mb-6 rounded-md" role="alert">
@@ -85,7 +85,22 @@
                     <h2 class="text-xl font-semibold text-gray-700 mb-4">
                         {{ $currentRun ? 'Current Run' : 'Last Run' }} Statistics
                     </h2>
-                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+
+                    <!-- Common Stats -->
+                    <div class="grid grid-cols-2 gap-4 mb-6">
+                        <div class="bg-yellow-50 p-4 rounded-lg">
+                            <p class="text-sm text-yellow-600 font-medium">Duration</p>
+                            <p class="text-2xl font-bold text-yellow-700" id="stat-duration">{{ $displayRun->getDurationInSeconds() ?? 0 }}s</p>
+                        </div>
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <p class="text-sm text-gray-600 font-medium">Started</p>
+                            <p class="text-sm font-bold text-gray-700" id="stat-started">{{ $displayRun->started_at?->format('H:i:s') ?? 'N/A' }}</p>
+                        </div>
+                    </div>
+
+                    <!-- Multi Stats -->
+                    <h3 class="text-lg font-semibold text-blue-700 mb-3">Multi (Batch) Statements</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                         <div class="bg-blue-50 p-4 rounded-lg">
                             <p class="text-sm text-blue-600 font-medium">Cycles</p>
                             <p class="text-2xl font-bold text-blue-700" id="stat-cycles">{{ $displayRun->total_cycles }}</p>
@@ -93,10 +108,6 @@
                         <div class="bg-green-50 p-4 rounded-lg">
                             <p class="text-sm text-green-600 font-medium">Total SORs</p>
                             <p class="text-2xl font-bold text-green-700" id="stat-statements">{{ number_format($displayRun->total_statements) }}</p>
-                        </div>
-                        <div class="bg-yellow-50 p-4 rounded-lg">
-                            <p class="text-sm text-yellow-600 font-medium">Duration</p>
-                            <p class="text-2xl font-bold text-yellow-700" id="stat-duration">{{ $displayRun->getDurationInSeconds() ?? 0 }}s</p>
                         </div>
                         <div class="bg-purple-50 p-4 rounded-lg">
                             <p class="text-sm text-purple-600 font-medium">SORs/second</p>
@@ -106,9 +117,26 @@
                             <p class="text-sm text-red-600 font-medium">Errors</p>
                             <p class="text-2xl font-bold text-red-700" id="stat-errors">{{ $displayRun->total_errors }}</p>
                         </div>
-                        <div class="bg-gray-50 p-4 rounded-lg">
-                            <p class="text-sm text-gray-600 font-medium">Started</p>
-                            <p class="text-sm font-bold text-gray-700" id="stat-started">{{ $displayRun->started_at?->format('H:i:s') ?? 'N/A' }}</p>
+                    </div>
+
+                    <!-- Single Stats -->
+                    <h3 class="text-lg font-semibold text-indigo-700 mb-3">Single Statements</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div class="bg-indigo-50 p-4 rounded-lg">
+                            <p class="text-sm text-indigo-600 font-medium">Cycles</p>
+                            <p class="text-2xl font-bold text-indigo-700" id="stat-single-cycles">{{ $displayRun->total_single_cycles ?? 0 }}</p>
+                        </div>
+                        <div class="bg-teal-50 p-4 rounded-lg">
+                            <p class="text-sm text-teal-600 font-medium">Total SORs</p>
+                            <p class="text-2xl font-bold text-teal-700" id="stat-single-statements">{{ number_format($displayRun->total_single_statements ?? 0) }}</p>
+                        </div>
+                        <div class="bg-pink-50 p-4 rounded-lg">
+                            <p class="text-sm text-pink-600 font-medium">SORs/second</p>
+                            <p class="text-2xl font-bold text-pink-700" id="stat-single-rate">{{ $displayRun->getSingleStatementsPerSecond() ?? 0 }}</p>
+                        </div>
+                        <div class="bg-orange-50 p-4 rounded-lg">
+                            <p class="text-sm text-orange-600 font-medium">Errors</p>
+                            <p class="text-2xl font-bold text-orange-700" id="stat-single-errors">{{ $displayRun->total_single_errors ?? 0 }}</p>
                         </div>
                     </div>
                 @else
@@ -133,11 +161,18 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.run) {
+                        // Multi stats
                         document.getElementById('stat-cycles').textContent = data.run.total_cycles;
                         document.getElementById('stat-statements').textContent = data.run.total_statements.toLocaleString();
                         document.getElementById('stat-duration').textContent = (data.run.duration_seconds || 0) + 's';
                         document.getElementById('stat-rate').textContent = data.run.statements_per_second;
                         document.getElementById('stat-errors').textContent = data.run.total_errors;
+
+                        // Single stats
+                        document.getElementById('stat-single-cycles').textContent = data.run.total_single_cycles || 0;
+                        document.getElementById('stat-single-statements').textContent = (data.run.total_single_statements || 0).toLocaleString();
+                        document.getElementById('stat-single-rate').textContent = data.run.single_statements_per_second || 0;
+                        document.getElementById('stat-single-errors').textContent = data.run.total_single_errors || 0;
                     }
 
                     if (!data.isRunning) {
