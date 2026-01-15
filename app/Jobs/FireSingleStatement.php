@@ -3,8 +3,6 @@
 namespace App\Jobs;
 
 use App\Models\ApiError;
-use App\Models\StatementResponse;
-use Carbon\Carbon;
 use Carbon\Carbon as CarbonTime;
 use Faker\Generator;
 use Illuminate\Bus\Queueable;
@@ -131,14 +129,11 @@ class FireSingleStatement implements ShouldQueue
             'content-type' => 'application/json',
         ])->post($this->url, $statement)->throw();
 
-        if ($response->successful()) {
-            $responseData = $response->json();
-            if (isset($responseData['uuid']) && isset($responseData['created_at'])) {
-                StatementResponse::create([
-                    'uuid' => $responseData['uuid'],
-                    'response_created_at' => Carbon::parse($responseData['created_at']),
-                ]);
-            }
+        if (! $response->successful()) {
+            Log::warning('[WARNING] Single statement API call returned non-successful response', [
+                'statement_id' => $this->id,
+                'status' => $response->status(),
+            ]);
         }
 
         $endTime = CarbonTime::now();
