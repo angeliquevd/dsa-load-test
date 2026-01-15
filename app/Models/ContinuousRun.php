@@ -30,15 +30,6 @@ class ContinuousRun extends Model
         }
     }
 
-    public function incrementSingleCycle(int $statementsCount, int $errors = 0): void
-    {
-        $this->increment('total_single_cycles');
-        $this->increment('total_single_statements', $statementsCount);
-        if ($errors > 0) {
-            $this->increment('total_single_errors', $errors);
-        }
-    }
-
     public function stop(): void
     {
         $this->update([

@@ -34,17 +34,15 @@ class ContinuousSingleJob implements ShouldQueue
             'cycle' => $continuousRun->total_single_cycles + 1,
         ]);
 
-        $errorsInCycle = 0;
-        $successfulDispatches = 0;
+        $dispatchErrors = 0;
 
-        // Dispatch 1000 FireSingleStatement jobs
+        // Dispatch 1000 FireSingleStatement jobs (stats are tracked on job completion)
         for ($i = 0; $i < self::BATCH_SIZE; $i++) {
             try {
                 $jobId = uniqid('continuous_single_');
-                FireSingleStatement::dispatch($jobId);
-                $successfulDispatches++;
+                FireSingleStatement::dispatch($jobId, $this->continuousRunId);
             } catch (\Exception $e) {
-                $errorsInCycle++;
+                $dispatchErrors++;
                 Log::error('[CONTINUOUS-SINGLE] Job dispatch failed in cycle', [
                     'continuous_run_id' => $this->continuousRunId,
                     'job_index' => $i,
@@ -64,13 +62,16 @@ class ContinuousSingleJob implements ShouldQueue
             return;
         }
 
-        // Update stats
-        $continuousRun->incrementSingleCycle($successfulDispatches, $errorsInCycle);
+        // Only increment cycle count - statement counts are tracked on job completion
+        $continuousRun->increment('total_single_cycles');
+        if ($dispatchErrors > 0) {
+            $continuousRun->increment('total_single_errors', $dispatchErrors);
+        }
 
-        Log::info('[CONTINUOUS-SINGLE] Cycle completed', [
+        Log::info('[CONTINUOUS-SINGLE] Cycle dispatched', [
             'continuous_run_id' => $this->continuousRunId,
             'total_single_cycles' => $continuousRun->total_single_cycles,
-            'total_single_statements' => $continuousRun->total_single_statements,
+            'jobs_dispatched' => self::BATCH_SIZE - $dispatchErrors,
         ]);
 
         // Self-dispatch to continue the loop

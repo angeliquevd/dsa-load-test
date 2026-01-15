@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\ApiError;
+use App\Models\ContinuousRun;
 use Carbon\Carbon as CarbonTime;
 use Faker\Generator;
 use Illuminate\Bus\Queueable;
@@ -28,14 +29,17 @@ class FireSingleStatement implements ShouldQueue
 
     public $url;
 
+    private ?int $continuousRunId;
+
     /**
      * Create a new job instance.
      *
      * @return void
      */
-    public function __construct($id)
+    public function __construct($id, ?int $continuousRunId = null)
     {
         $this->id = $id;
+        $this->continuousRunId = $continuousRunId;
     }
 
     /**
@@ -134,6 +138,11 @@ class FireSingleStatement implements ShouldQueue
                 'statement_id' => $this->id,
                 'status' => $response->status(),
             ]);
+        }
+
+        // Increment continuous run stats on successful completion
+        if ($this->continuousRunId) {
+            ContinuousRun::where('id', $this->continuousRunId)->increment('total_single_statements');
         }
 
         $endTime = CarbonTime::now();
@@ -239,6 +248,11 @@ class FireSingleStatement implements ShouldQueue
                 'statement_id' => $this->id,
                 'exception' => $exception->getMessage(),
             ]);
+        }
+
+        // Increment continuous run error stats on failure
+        if ($this->continuousRunId) {
+            ContinuousRun::where('id', $this->continuousRunId)->increment('total_single_errors');
         }
     }
 }
