@@ -21,6 +21,9 @@ class ContinuousRun extends Model
         return $this->status === 'running';
     }
 
+    /**
+     * @deprecated Stats are now tracked per-job via FireStatement completion.
+     */
     public function incrementCycle(int $errors = 0): void
     {
         $this->increment('total_cycles');

@@ -13,6 +13,8 @@ class ContinuousMultiJob implements ShouldQueue
 
     public int $timeout = 300;
 
+    private const BATCH_SIZE = 100;
+
     public function __construct(public int $continuousRunId) {}
 
     public function handle(): void
@@ -32,16 +34,16 @@ class ContinuousMultiJob implements ShouldQueue
             'cycle' => $continuousRun->total_cycles + 1,
         ]);
 
-        $errorsInCycle = 0;
+        $dispatchErrors = 0;
 
-        // Dispatch 3 FireStatement jobs synchronously
-        for ($i = 0; $i < 3; $i++) {
+        // Dispatch FireStatement jobs asynchronously to saturate all workers
+        for ($i = 0; $i < self::BATCH_SIZE; $i++) {
             try {
                 $jobId = uniqid('continuous_');
-                FireStatement::dispatchSync($jobId);
+                FireStatement::dispatch($jobId, $this->continuousRunId);
             } catch (\Exception $e) {
-                $errorsInCycle++;
-                Log::error('[CONTINUOUS] Job failed in cycle', [
+                $dispatchErrors++;
+                Log::error('[CONTINUOUS] Job dispatch failed in cycle', [
                     'continuous_run_id' => $this->continuousRunId,
                     'job_index' => $i,
                     'error' => $e->getMessage(),
@@ -60,13 +62,16 @@ class ContinuousMultiJob implements ShouldQueue
             return;
         }
 
-        // Update stats
-        $continuousRun->incrementCycle($errorsInCycle);
+        // Increment cycle count - statement counts are tracked on job completion
+        $continuousRun->increment('total_cycles');
+        if ($dispatchErrors > 0) {
+            $continuousRun->increment('total_errors', $dispatchErrors);
+        }
 
-        Log::info('[CONTINUOUS] Cycle completed', [
+        Log::info('[CONTINUOUS] Cycle dispatched', [
             'continuous_run_id' => $this->continuousRunId,
             'total_cycles' => $continuousRun->total_cycles,
-            'total_statements' => $continuousRun->total_statements,
+            'jobs_dispatched' => self::BATCH_SIZE - $dispatchErrors,
         ]);
 
         // Self-dispatch to continue the loop

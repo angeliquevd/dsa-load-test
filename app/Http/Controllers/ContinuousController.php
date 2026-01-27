@@ -41,7 +41,7 @@ class ContinuousController extends Controller
         ContinuousMultiJob::dispatch($continuousRun->id);
         ContinuousSingleJob::dispatch($continuousRun->id);
 
-        return back()->with('status', 'Continuous execution started. Multi: 300 SORs/cycle, Single: 1000 SORs/cycle.');
+        return back()->with('status', 'Continuous execution started. Multi: 10,000 SORs/cycle (100 batches), Single: 1000 SORs/cycle.');
     }
 
     public function stop(): RedirectResponse

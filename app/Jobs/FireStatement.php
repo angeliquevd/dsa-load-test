@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\ApiError;
+use App\Models\ContinuousRun;
 use Carbon\Carbon as CarbonTime;
 use Faker\Generator;
 use Illuminate\Bus\Queueable;
@@ -39,6 +40,8 @@ class FireStatement implements ShouldQueue
 
     private $id;
 
+    private ?int $continuousRunId;
+
     private $faker;
 
     /**
@@ -46,9 +49,10 @@ class FireStatement implements ShouldQueue
      *
      * @return void
      */
-    public function __construct($id)
+    public function __construct($id, ?int $continuousRunId = null)
     {
         $this->id = $id;
+        $this->continuousRunId = $continuousRunId;
     }
 
     /**
@@ -124,6 +128,8 @@ class FireStatement implements ShouldQueue
 
         // Fire-and-forget: send data with short timeout, don't wait for response
         // The server receives data but doesn't respond quickly, so we just ensure data is sent
+        $connectionFailed = false;
+
         try {
             Http::timeout(10)->connectTimeout(10)->withHeaders([
                 'Authorization' => 'Bearer '.config('app.remote_token'),
@@ -142,6 +148,8 @@ class FireStatement implements ShouldQueue
                     'batch_id' => $this->id,
                 ]);
             } else {
+                $connectionFailed = true;
+
                 // Actual connection failure - data may not have been sent
                 Log::error('[ERROR] Batch statement API connection failed', [
                     'batch_id' => $this->id,
@@ -157,6 +165,15 @@ class FireStatement implements ShouldQueue
                     'error_message' => $e->getMessage(),
                     'response_body' => null,
                 ]);
+            }
+        }
+
+        // Track stats for continuous runs
+        if ($this->continuousRunId) {
+            if ($connectionFailed) {
+                ContinuousRun::where('id', $this->continuousRunId)->increment('total_errors');
+            } else {
+                ContinuousRun::where('id', $this->continuousRunId)->increment('total_statements', 100);
             }
         }
 
