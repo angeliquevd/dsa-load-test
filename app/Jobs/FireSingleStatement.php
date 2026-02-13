@@ -121,10 +121,10 @@ class FireSingleStatement implements ShouldQueue
         // Record the first statement timestamp if not already set
         if (Cache::get('single_processing_start') === null) {
             Cache::put('single_processing_start', $startTime->toIso8601String(), now()->addHours(1));
-            Log::info('[METRICS] First single statement started sending', [
-                'timestamp' => $startTime->toIso8601String(),
-                'statement_id' => $this->id,
-            ]);
+//            Log::info('[METRICS] First single statement started sending', [
+//                'timestamp' => $startTime->toIso8601String(),
+//                'statement_id' => $this->id,
+//            ]);
         }
 
         $response = Http::timeout(60)->connectTimeout(60)->withHeaders([
@@ -153,7 +153,7 @@ class FireSingleStatement implements ShouldQueue
         // Increment the processed count
         $processed = Cache::increment('single_processed_count');
         $total = Cache::get('total_single_count');
-        Log::info('Processed: '.$processed.' - Total: '.$total);
+//        Log::info('Processed: '.$processed.' - Total: '.$total);
 
         // Always log the current progress for debugging
         Log::debug('[METRICS] Single statement progress', [
@@ -166,22 +166,22 @@ class FireSingleStatement implements ShouldQueue
         if ($processed >= $total) {
             $startTimeStr = Cache::get('single_processing_start');
             $endTimeStr = Cache::get('single_processing_end');
-            Log::info('single_processing_start: '.$startTimeStr);
-            Log::info('single_processing_end: '.$endTimeStr);
+//            Log::info('single_processing_start: '.$startTimeStr);
+//            Log::info('single_processing_end: '.$endTimeStr);
 
             // Make sure we have valid timestamps
             if ($startTimeStr && $endTimeStr) {
-                $startTimeObj = CarbonTime::parse($startTimeStr);
-                $endTimeObj = CarbonTime::parse($endTimeStr);
-                $duration = $endTimeObj->diffInSeconds($startTimeObj);
+//                $startTimeObj = CarbonTime::parse($startTimeStr);
+//                $endTimeObj = CarbonTime::parse($endTimeStr);
+//                $duration = $endTimeObj->diffInSeconds($startTimeObj);
 
-                Log::info('[METRICS] All single statements completed', [
-                    'timestamp_start' => $startTimeStr,
-                    'timestamp_end' => $endTimeStr,
-                    'duration_seconds' => $duration,
-                    'total_statements' => $total,
-                    'processed_statements' => $processed,
-                ]);
+//                Log::info('[METRICS] All single statements completed', [
+//                    'timestamp_start' => $startTimeStr,
+//                    'timestamp_end' => $endTimeStr,
+//                    'duration_seconds' => $duration,
+//                    'total_statements' => $total,
+//                    'processed_statements' => $processed,
+//                ]);
             } else {
                 Log::warning('[METRICS] Could not generate final single statement metrics - missing timestamps', [
                     'has_start_time' => (bool) $startTimeStr,

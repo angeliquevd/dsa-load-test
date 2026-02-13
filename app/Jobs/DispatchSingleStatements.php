@@ -54,7 +54,7 @@ class DispatchSingleStatements implements ShouldQueue
             Cache::put('single_processed_count', 0, now()->addHours(1));
             Cache::put('total_single_count', $this->total, now()->addHours(1));
 
-            Log::info("[METRICS] Starting to dispatch {$this->total} single statements in batches of {$this->batchSize}");
+//            Log::info("[METRICS] Starting to dispatch {$this->total} single statements in batches of {$this->batchSize}");
         }
 
         // Determine the upper limit for this batch
