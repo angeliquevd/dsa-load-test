@@ -131,7 +131,7 @@ class FireStatement implements ShouldQueue
         $connectionFailed = false;
 
         try {
-            Http::timeout(10)->connectTimeout(10)->withHeaders([
+            Http::timeout(120)->connectTimeout(30)->withHeaders([
                 'Authorization' => 'Bearer '.config('app.remote_token'),
                 'accept' => 'application/json',
                 'content-type' => 'application/json',
